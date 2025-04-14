@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keep Your Mind</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #8ab4f8;
+            --primary-hover: #669df6;
+            --bg-color: #202124;
+            --card-bg: #2d2e30;
+            --text-primary: #e8eaed;
+            --text-secondary: #9aa0a6;
+            --border-color: #3c4043;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 30%), 0 1px 3px 1px rgb(0 0 0 / 15%);
+            --shadow-md: 0 1px 3px 0 rgb(0 0 0 / 30%), 0 4px 8px 3px rgb(0 0 0 / 15%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', 'Microsoft YaHei', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.5;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 0;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        body.selection-mode .header-actions {
+            opacity: 1;
+        }
+
+        .btn {
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-color);
+            color: var(--bg-color);
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+
+        .entries-grid {
+            column-count: 4;
+            column-gap: 1.5rem;
+            padding: 1rem;
+        }
+
+        .entry-card {
+            break-inside: avoid;
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s;
+            cursor: move;
+            position: relative;
+            margin-bottom: 1.5rem;
+            width: 100%;
+            user-select: none;
+        }
+
+        .entry-card:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .entry-card.dragging {
+            opacity: 0.5;
+            box-shadow: var(--shadow-md);
+        }
+
+        .entry-card.drag-over {
+            border: 2px dashed var(--primary-color);
+        }
+
+        .entry-card.selected {
+            border: 2px solid var(--primary-color);
+            background-color: rgba(138, 180, 248, 0.1);
+        }
+
+        .entry-checkbox {
+            position: absolute;
+            top: 0.5rem;
+            left: 0.5rem;
+            width: 18px;
+            height: 18px;
+            z-index: 10;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+            margin: 0;
+            padding: 0;
+            accent-color: var(--primary-color);
+            border-radius: 50%;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-color: var(--card-bg);
+            border: 2px solid var(--border-color);
+        }
+
+        .entry-checkbox:checked {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z'/%3E%3C/svg%3E");
+            background-size: 14px;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .entry-card:hover .entry-checkbox {
+            opacity: 1;
+        }
+
+        .entry-card.selected .entry-checkbox {
+            opacity: 1;
+        }
+
+        .entry-title {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .entry-content {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            white-space: pre-wrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 8;
+            -webkit-box-orient: vertical;
+            font-family: monospace;
+        }
+
+        /* Markdown styles */
+        .entry-content h1,
+        .entry-content h2,
+        .entry-content h3,
+        .entry-content h4,
+        .entry-content h5,
+        .entry-content h6 {
+            color: var(--text-primary);
+            margin: 1em 0 0.5em;
+        }
+
+        .entry-content p {
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .entry-content p + p {
+            margin-top: 0.5em;
+        }
+
+        .entry-content code {
+            background-color: var(--bg-color);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        .entry-content pre {
+            background-color: var(--bg-color);
+            padding: 1em;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+
+        .entry-content blockquote {
+            border-left: 4px solid var(--primary-color);
+            margin: 1em 0;
+            padding-left: 1em;
+            color: var(--text-secondary);
+        }
+
+        .entry-content ul,
+        .entry-content ol {
+            margin: 0.5em 0;
+            padding-left: 1.5em;
+        }
+
+        .entry-content a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .entry-content a:hover {
+            text-decoration: underline;
+        }
+
+        .entry-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+        }
+
+        .entry-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1em 0;
+        }
+
+        .entry-content th,
+        .entry-content td {
+            border: 1px solid var(--border-color);
+            padding: 0.5em;
+            text-align: left;
+        }
+
+        .entry-content th {
+            background-color: var(--bg-color);
+        }
+
+        .entry-date {
+            display: none;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .entry-actions {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .entry-card:hover .entry-actions {
+            opacity: 1;
+        }
+
+        .btn-delete {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .btn-delete:hover {
+            background-color: #3c4043;
+            color: #f28b82;
+        }
+
+        .add-button {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: var(--shadow-md);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .add-button:hover {
+            background-color: var(--primary-color);
+            color: var(--bg-color);
+            transform: scale(1.1);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            position: relative;
+            background-color: var(--card-bg);
+            padding: 1.5rem;
+            width: 90%;
+            max-width: 1200px;
+            border-radius: 8px;
+            box-shadow: var(--shadow-md);
+            margin: 0;
+            display: flex;
+            gap: 1.5rem;
+            max-height: 80vh;
+            height: 80vh;
+        }
+
+        .edit-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        .preview-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid var(--border-color);
+            padding-left: 1.5rem;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        .preview-title {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+            flex-shrink: 0;
+        }
+
+        .preview-content {
+            flex: 1;
+            overflow-y: auto;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            padding-right: 0.5rem;
+        }
+
+        /* Preview area Markdown styles */
+        .preview-content h1,
+        .preview-content h2,
+        .preview-content h3,
+        .preview-content h4,
+        .preview-content h5,
+        .preview-content h6 {
+            color: var(--text-primary);
+            margin: 1em 0 0.5em;
+        }
+
+        .preview-content p {
+            margin: 0.5em 0;
+        }
+
+        .preview-content code {
+            background-color: var(--bg-color);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        .preview-content pre {
+            background-color: var(--bg-color);
+            padding: 1em;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 1em 0;
+        }
+
+        .preview-content pre code {
+            background-color: transparent;
+            padding: 0;
+            border-radius: 0;
+        }
+
+        .preview-content blockquote {
+            border-left: 4px solid var(--primary-color);
+            margin: 1em 0;
+            padding-left: 1em;
+            color: var(--text-secondary);
+        }
+
+        .preview-content ul,
+        .preview-content ol {
+            margin: 0.5em 0;
+            padding-left: 1.5em;
+        }
+
+        .preview-content li {
+            margin: 0.3em 0;
+        }
+
+        .preview-content a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .preview-content a:hover {
+            text-decoration: underline;
+        }
+
+        .preview-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+            margin: 1em 0;
+        }
+
+        .preview-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1em 0;
+        }
+
+        .preview-content th,
+        .preview-content td {
+            border: 1px solid var(--border-color);
+            padding: 0.5em;
+            text-align: left;
+        }
+
+        .preview-content th {
+            background-color: var(--bg-color);
+        }
+
+        #editForm {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .edit-textarea {
+            width: 100%;
+            flex: 1;
+            min-height: 0;
+            padding: 0.75rem;
+            border: none;
+            font-size: 1rem;
+            resize: none;
+            outline: none;
+            font-family: inherit;
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+            overflow-y: auto;
+        }
+
+        .edit-textarea::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .modal-date {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 1200px) {
+            .entries-grid {
+                column-count: 3;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .entries-grid {
+                column-count: 2;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .entries-grid {
+                column-count: 1;
+            }
+        }
+
+        /* Selection mode styles */
+        body.selection-mode .entry-card {
+            cursor: pointer;
+        }
+
+        body.selection-mode .entry-card:hover {
+            background-color: rgba(138, 180, 248, 0.05);
+        }
+
+        body.selection-mode .entry-checkbox {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <h1>Keep Your Mind</h1>
+            <div class="header-actions">
+                <button class="btn" id="selectAllBtn">Select All</button>
+                <button class="btn" id="exportBtn">Export</button>
+                <button class="btn btn-danger" id="deleteSelectedBtn">Delete</button>
+            </div>
+        </header>
+
+        <div class="entries-grid">
+            {% for entry in entries %}
+            <div class="entry-card" 
+                 data-id="{{ entry.id }}"
+                 data-title="{{ entry.title }}"
+                 data-content="{{ entry.content }}"
+                 data-date="{{ entry.date.strftime('%Y-%m-%d %H:%M') }}"
+                 onclick="handleCardClick(event, this)">
+                <input type="checkbox" class="entry-checkbox" onchange="handleCheckboxChange(event, this)">
+                <div class="entry-title">{{ entry.title }}</div>
+                <div class="entry-content">{{ entry.content }}</div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <button class="add-button" onclick="openNewModal()">+</button>
+
+        <div id="editModal" class="modal">
+            <div class="modal-content">
+                <div class="edit-container">
+                    <div class="modal-date" id="modalDate"></div>
+                    <form id="editForm" method="POST">
+                        <textarea name="content" class="edit-textarea" placeholder="First line as title, start content from second line..." required></textarea>
+                    </form>
+                </div>
+                <div class="preview-container">
+                    <div class="preview-title">Preview</div>
+                    <div class="preview-content" id="previewContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentEntryId = null;
+        let isDirty = false;
+        let isSelectAll = false;
+
+        // Handle checkbox change
+        function handleCheckboxChange(event, checkbox) {
+            event.stopPropagation();
+            const card = checkbox.closest('.entry-card');
+            card.classList.toggle('selected', checkbox.checked);
+            updateSelectionMode();
+        }
+
+        // Update selection mode
+        function updateSelectionMode() {
+            const hasSelectedCards = document.querySelectorAll('.entry-card.selected').length > 0;
+            document.body.classList.toggle('selection-mode', hasSelectedCards);
+        }
+
+        // Toggle select all
+        document.getElementById('selectAllBtn').addEventListener('click', function() {
+            isSelectAll = !isSelectAll;
+            const checkboxes = document.querySelectorAll('.entry-checkbox');
+            const cards = document.querySelectorAll('.entry-card');
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = isSelectAll;
+            });
+            
+            cards.forEach(card => {
+                card.classList.toggle('selected', isSelectAll);
+            });
+            
+            updateSelectionMode();
+        });
+
+        // Handle card click event
+        function handleCardClick(event, element) {
+            // If checkbox is clicked, do nothing else
+            if (event.target.type === 'checkbox') {
+                return;
+            }
+            
+            // If in selection mode, toggle selection
+            if (document.body.classList.contains('selection-mode')) {
+                const checkbox = element.querySelector('.entry-checkbox');
+                checkbox.checked = !checkbox.checked;
+                element.classList.toggle('selected', checkbox.checked);
+                updateSelectionMode();
+                return;
+            }
+            
+            // Otherwise open edit modal
+            openEditModal(element);
+        }
+
+        // Export selected entries as MD file
+        document.getElementById('exportBtn').addEventListener('click', function() {
+            const selectedCards = document.querySelectorAll('.entry-card.selected');
+            console.log('Selected cards:', selectedCards.length); // Debug info
+            
+            if (selectedCards.length === 0) {
+                alert('Please select entries to export');
+                return;
+            }
+            
+            let mdContent = '';
+            
+            selectedCards.forEach(card => {
+                const title = card.dataset.title;
+                const content = card.dataset.content;
+                const date = card.dataset.date;
+                
+                mdContent += `# ${title}\n\n`;
+                mdContent += `*Created: ${date}*\n\n`;
+                mdContent += `${content}\n\n`;
+                mdContent += `---\n\n`;
+            });
+            
+            // Create Blob object
+            const blob = new Blob([mdContent], { type: 'text/markdown' });
+            
+            // Create download link
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `diary_export_${new Date().toISOString().slice(0, 10)}.md`;
+            
+            // Trigger download
+            document.body.appendChild(a);
+            a.click();
+            
+            // Cleanup
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 0);
+        });
+
+        // Delete selected entries
+        document.getElementById('deleteSelectedBtn').addEventListener('click', function() {
+            const selectedCards = document.querySelectorAll('.entry-card.selected');
+            
+            if (selectedCards.length === 0) {
+                alert('Please select entries to delete');
+                return;
+            }
+            
+            if (confirm(`Are you sure you want to delete ${selectedCards.length} entries?`)) {
+                const ids = Array.from(selectedCards).map(card => card.dataset.id);
+                
+                // Send batch delete request
+                fetch('/batch_delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ ids: ids }),
+                })
+                .then(response => {
+                    if (response.ok) {
+                        // Reload page after successful deletion
+                        window.location.reload();
+                    } else {
+                        alert('Delete failed, please try again');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Delete failed, please try again');
+                });
+            }
+        });
+
+        function updatePreview() {
+            const textarea = document.querySelector('.edit-textarea');
+            const previewContent = document.getElementById('previewContent');
+            const content = textarea.value;
+            const lines = content.split('\n');
+            
+            if (lines.length > 0) {
+                const title = lines[0];
+                const body = lines.slice(1).join('\n');
+                previewContent.innerHTML = `<h3>${title}</h3>${renderMarkdown(body)}`;
+            } else {
+                previewContent.innerHTML = '';
+            }
+        }
+
+        function openEditModal(element) {
+            const id = element.dataset.id;
+            const title = element.dataset.title;
+            const content = element.dataset.content;
+            const date = element.dataset.date;
+            
+            currentEntryId = id;
+            const form = document.getElementById('editForm');
+            form.action = `/edit/${id}`;
+            const textarea = form.querySelector('textarea');
+            textarea.value = title + '\n' + content;
+            document.getElementById('modalDate').textContent = date;
+            document.getElementById('editModal').classList.add('show');
+            textarea.focus();
+            isDirty = false;
+            updatePreview();
+        }
+
+        function openNewModal() {
+            currentEntryId = null;
+            const form = document.getElementById('editForm');
+            form.action = '/add';
+            const textarea = form.querySelector('textarea');
+            textarea.value = '';
+            document.getElementById('modalDate').textContent = '';
+            document.getElementById('editModal').classList.add('show');
+            textarea.focus();
+            isDirty = false;
+            updatePreview();
+        }
+
+        function closeModal() {
+            if (isDirty) {
+                document.getElementById('editForm').submit();
+            }
+            document.getElementById('editModal').classList.remove('show');
+        }
+
+        // Listen for text changes
+        document.querySelector('textarea').addEventListener('input', function() {
+            isDirty = true;
+            updatePreview();
+        });
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('editModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+
+        // Listen for Enter key
+        document.querySelector('textarea').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                closeModal();
+            }
+        });
+
+        // Drag and drop related code
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.entry-card');
+            const grid = document.querySelector('.entries-grid');
+            let draggedCard = null;
+
+            cards.forEach(card => {
+                card.setAttribute('draggable', true);
+                
+                card.addEventListener('dragstart', function(e) {
+                    draggedCard = this;
+                    this.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+
+                card.addEventListener('dragend', function(e) {
+                    this.classList.remove('dragging');
+                    document.querySelectorAll('.entry-card').forEach(card => {
+                        card.classList.remove('drag-over');
+                    });
+                    
+                    // 更新所有卡片的位置
+                    const cards = document.querySelectorAll('.entry-card');
+                    const positions = Array.from(cards).map((card, index) => ({
+                        id: parseInt(card.dataset.id),
+                        position: cards.length - index
+                    }));
+                    
+                    // 发送位置更新到服务器
+                    fetch('/update_positions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ positions: positions }),
+                    }).catch(error => {
+                        console.error('Error updating positions:', error);
+                    });
+                });
+
+                card.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    if (this !== draggedCard) {
+                        this.classList.add('drag-over');
+                    }
+                });
+
+                card.addEventListener('dragleave', function(e) {
+                    this.classList.remove('drag-over');
+                });
+
+                card.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    this.classList.remove('drag-over');
+                    
+                    if (this !== draggedCard) {
+                        const allCards = [...grid.querySelectorAll('.entry-card')];
+                        const draggedIndex = allCards.indexOf(draggedCard);
+                        const droppedIndex = allCards.indexOf(this);
+
+                        if (draggedIndex < droppedIndex) {
+                            this.parentNode.insertBefore(draggedCard, this.nextSibling);
+                        } else {
+                            this.parentNode.insertBefore(draggedCard, this);
+                        }
+                    }
+                });
+            });
+        });
+
+        // Modified Markdown rendering function
+        function renderMarkdown(content) {
+            // Configure marked options
+            marked.setOptions({
+                breaks: true,  // Convert line breaks to <br>
+                gfm: true,    // Enable GitHub Flavored Markdown
+                headerIds: false,  // Disable header IDs
+                mangle: false,     // Disable header ID escaping
+                sanitize: false,   // Allow HTML tags
+                smartLists: true,  // Use smarter list behavior
+                smartypants: false, // Disable smart typography
+                pedantic: false,   // Don't try to fix original markdown errors
+                xhtml: false       // Don't use self-closing tags
+            });
+            
+            // Handle line breaks in content
+            content = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            
+            // Render Markdown
+            let html = marked.parse(content);
+            
+            // Remove extra paragraph spacing
+            html = html.replace(/<\/p>\s*<p>/g, '</p><p>');
+            
+            return html;
+        }
+
+        // 在 script 标签内添加同步滚动功能
+        document.addEventListener('DOMContentLoaded', function() {
+            const editTextarea = document.querySelector('.edit-textarea');
+            const previewContent = document.getElementById('previewContent');
+            let isScrolling = false;
+
+            // 编辑区滚动时同步预览区
+            editTextarea.addEventListener('scroll', function() {
+                if (!isScrolling) {
+                    isScrolling = true;
+                    const scrollPercent = editTextarea.scrollTop / (editTextarea.scrollHeight - editTextarea.clientHeight);
+                    previewContent.scrollTop = scrollPercent * (previewContent.scrollHeight - previewContent.clientHeight);
+                    setTimeout(() => { isScrolling = false; }, 50);
+                }
+            });
+
+            // 预览区滚动时同步编辑区
+            previewContent.addEventListener('scroll', function() {
+                if (!isScrolling) {
+                    isScrolling = true;
+                    const scrollPercent = previewContent.scrollTop / (previewContent.scrollHeight - previewContent.clientHeight);
+                    editTextarea.scrollTop = scrollPercent * (editTextarea.scrollHeight - editTextarea.clientHeight);
+                    setTimeout(() => { isScrolling = false; }, 50);
+                }
+            });
+        });
+    </script>
+</body>
+</html> 
